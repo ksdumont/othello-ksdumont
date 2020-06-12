@@ -1,13 +1,14 @@
 const helper = {
+  /* Generate initial board state */
   generateBoard() {
     let rows = [];
     for (let i = 0; i < 8; i++) {
       let cells = [];
       for (let j = 0; j < 8; j++) {
         if ((i === 3 && j === 3) || (i === 4 && j === 4)) {
-          cells.push(0);
+          cells.push(0); //represents the color white
         } else if ((i === 3 && j === 4) || (i === 4 && j === 3)) {
-          cells.push(1);
+          cells.push(1); //represents the color black
         } else {
           cells.push(null);
         }
@@ -33,6 +34,7 @@ const helper = {
       "topleft",
     ];
     let currentDirectionIndex = directions.indexOf(direction);
+
     if (currentDirectionIndex === -1) {
       return game;
     }
@@ -207,6 +209,8 @@ const helper = {
     return false;
   },
 
+  /* Flip all pieces in the middle */
+
   completeDirection(row, cell, turn) {
     this.globalVars.potential.forEach((flip) => {
       this.globalVars.game[flip[0]][flip[1]] = turn;
@@ -216,6 +220,8 @@ const helper = {
     }
     return this.globalVars.game;
   },
+
+  /* Get Score Count */
 
   pieceCount(game) {
     let black = 0;

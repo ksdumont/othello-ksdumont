@@ -14,6 +14,8 @@ export default function Game(props) {
   const makeMove = (row, cell) => {
     // Check if move is valid
     setGameField(gameHelper.evaluateMove(row, cell, gameField, turn));
+
+    // Set New Score and Turn
     const newScore = gameHelper.pieceCount(gameField);
     let blackOrWhite = turn === 0 ? "white" : "black";
     if (score[blackOrWhite] !== newScore[blackOrWhite]) {
