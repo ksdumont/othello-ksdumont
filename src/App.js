@@ -1,11 +1,11 @@
 import React from "react";
-
+import Game from "./Pages/Game";
 import "./App.css";
 
 function App() {
   return (
     <div className="App">
-      <h1>Othello</h1>
+      <Game />
     </div>
   );
 }
