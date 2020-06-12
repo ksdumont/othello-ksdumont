@@ -6,11 +6,13 @@ export default function Game(props) {
   const [gameField, setGameField] = useState(gameHelper.generateBoard());
   const [turn, setTurn] = useState(1);
   const [score, setScore] = useState({});
+
   useEffect(() => {
     setScore(gameHelper.pieceCount(gameField));
   }, []);
+
   const makeMove = (row, cell) => {
-    // valid?
+    // Check if move is valid
     setGameField(gameHelper.evaluateMove(row, cell, gameField, turn));
     const newScore = gameHelper.pieceCount(gameField);
     let blackOrWhite = turn === 0 ? "white" : "black";
@@ -21,11 +23,17 @@ export default function Game(props) {
   };
   return (
     <section>
-      <h1 className="title">Othello</h1>
+      <h1 className="heading">Othello</h1>
 
       <section className="sub-heading">
-        White: {score.white} Black: {score.black} <br />
-        {turn === 1 ? "Black" : "White"}'s Turn
+        <div className="score">
+          <div className="circle black">{score.black}</div>
+          <div className="circle white">{score.white}</div>
+        </div>
+        <br />
+        <div className={"turn turn-" + (turn === 1 ? "black" : "white")}>
+          {turn === 1 ? "Black" : "White"}'s turn
+        </div>
       </section>
 
       <section className="game-container">
