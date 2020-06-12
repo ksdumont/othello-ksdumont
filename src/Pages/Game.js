@@ -25,7 +25,7 @@ export default function Game(props) {
 
       <section className="sub-heading">
         White: {score.white} Black: {score.black} <br />
-        Turn: {turn === 1 ? "black" : "white"}
+        {turn === 1 ? "Black" : "White"}'s Turn
       </section>
 
       <section className="game-container">
