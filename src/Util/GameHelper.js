@@ -163,14 +163,10 @@ const helper = {
         for (let i = row - 1; i >= 0; i--) {
           offset--;
           if (
-            this.checkCellValue(
-              game[i][offset],
-              row,
-              cell,
-              turn,
-              directions[currentDirectionIndex + 1],
-              [i, offset]
-            )
+            this.checkCellValue(game[i][offset], row, cell, turn, null, [
+              i,
+              offset,
+            ])
           ) {
             break;
           }
