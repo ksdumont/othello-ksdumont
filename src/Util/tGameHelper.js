@@ -15,44 +15,46 @@ const helper = {
       rows.push(cells);
     }
     // debug
-    // rows = [
-    //   [1, 1, 1, 1, 1, 1, 1, 1],
-    //   [1, 0, 0, 0, 0, 0, 0, 1],
-    //   [1, 0, 0, 0, 0, 0, 0, 1],
-    //   [1, 0, 0, 0, 0, 0, 0, 1],
-    //   [1, 0, 0, 0, 0, 0, 0, 1],
-    //   [1, 0, 0, 0, 0, 0, 0, 1],
-    //   [1, 1, 1, 1, 1, 0, 0, null],
-    //   [1, 1, 1, 1, 1, 1, 1, null],
-    // ];
+    rows = [
+      [1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, null],
+    ];
     this.globalVars.game = rows;
     return rows;
   },
   globalVars: {
     potential: [],
     game: [],
-    virtual: false, // a flag to know if we want to execute the flips, check to see if there are potentials to know if there is a valid move
+    virtual: false,
   },
-  checkGameStatus(turn) {
+  checkGameStatus(turn, game) {
+    console.log(turn);
+    this.globalVars.potential = [];
     this.globalVars.virtual = true;
     // all fields are not null
     let openCell = false;
     let movePossible = false;
-    this.globalVars.game.forEach((row) => {
-      row.forEach((cell) => {
+    game.forEach((row, rowIndex) => {
+      row.forEach((cell, cellIndex) => {
         if (cell === null) {
           openCell = true;
           if (!movePossible) {
-            this.evaluateMove(row, cell, this.globalVars.game, turn); //in virtual mode
-            console.log(this.globalVars.potential);
+            this.evaluateMove(rowIndex, cellIndex, this.globalVars.game, turn);
             movePossible = this.globalVars.potential.length > 0;
           }
         }
       });
     });
+
     this.globalVars.virtual = false;
     return {
-      movePossible,
+      movePossible: movePossible,
       gameRunning: openCell,
     };
   },
@@ -69,17 +71,13 @@ const helper = {
     ];
     let currentDirectionIndex = directions.indexOf(direction);
     if (currentDirectionIndex === -1) {
-      // ?
       return game;
     }
     if (!this.globalVars.virtual) {
-      // only clearing potentials if we actually flip, not the case in virtual
       this.globalVars.potential = [];
     }
-
     this.globalVars.game = game;
     let offset;
-
     switch (direction) {
       case "top":
         if (row === 0) {
@@ -305,22 +303,16 @@ const helper = {
     }
     if (condition !== turn) {
       this.globalVars.potential.push(potentialValues);
-
-      //upwards direction
+      // secure top & bottom row undefined evaluation
       if (
-        potentialValues[0] === 0 &&
-        ["topleft", "top", "topright"].includes(nextDirection)
+        potentialValues[1] === 0 ||
+        potentialValues[1] === 7 ||
+        (potentialValues[0] === 0 &&
+          ["topleft", "top", "topright"].includes(nextDirection)) ||
+        (potentialValues[0] === 7 &&
+          ["bottomright", "bottom", "bottomleft"].includes(nextDirection))
       ) {
-      }
-
-      //downward directions
-      if (
-        potentialValues[0] === 7 &&
-        ["bottomright", "bottom", "bottomleft"].includes(nextDirection)
-      ) {
-      }
-
-      if (typeof this.globalVars.game[potentialValues[0] + 1] === "undefined") {
+        this.globalVars.potential = [];
         return this.evaluateMove(
           row,
           cell,
@@ -350,9 +342,9 @@ const helper = {
     if (!this.globalVars.virtual) {
       this.globalVars.potential.forEach((flip) => {
         this.globalVars.game[flip[0]][flip[1]] = turn;
-      }); // the actual flip
+      });
       if (this.globalVars.potential.length > 0) {
-        this.globalVars.game[row][cell] = turn; // the piece getting placed
+        this.globalVars.game[row][cell] = turn;
       }
     }
     return this.globalVars.game;
@@ -380,73 +372,3 @@ const helper = {
 };
 
 export default helper;
-
-// game below
-
-import React, { useState, useEffect } from "react";
-import gameHelper from "../util/gameHelper";
-import Cell from "../components/Cell";
-
-export default function Game(props) {
-  const [gameField, setGameField] = useState(gameHelper.generateBoard());
-  const [turn, setTurn] = useState(0);
-  const [score, setScore] = useState({});
-  const [gameRunning, setGameRunning] = useState(true);
-  useEffect(() => {
-    setScore(gameHelper.pieceCount(gameField));
-    const gameStatus = gameHelper.checkGameStatus(turn, gameField);
-    if (gameStatus.gameRunning && !gameStatus.movePossible) {
-      // check if possible for other player
-      let gameEndCheck = gameHelper.checkGameStatus(
-        turn === 0 ? 1 : 0,
-        gameField
-      );
-      if (!gameEndCheck.movePossible) {
-        // game over
-      } else {
-        // prompt skipping player
-      }
-    }
-    console.log(gameStatus);
-    setGameRunning(gameStatus.gameRunning);
-  }, [gameField, turn, gameRunning]);
-  const makeMove = (row, cell) => {
-    console.log("mode:" + gameHelper.globalVars.virtual);
-    // valid?
-    setGameField(gameHelper.evaluateMove(row, cell, gameField, turn));
-    const newScore = gameHelper.pieceCount(gameField);
-    let blackOrWhite = turn === 0 ? "white" : "black";
-    if (score[blackOrWhite] !== newScore[blackOrWhite]) {
-      setTurn(turn === 1 ? 0 : 1);
-    }
-    setScore(newScore);
-  };
-  const newGame = () => {
-    setGameField(gameHelper.generateBoard());
-    setTurn(1);
-  };
-  return (
-    <section>
-      <h1>Othello</h1>
-      <p>
-        White: {score.white} Black: {score.black} <br />
-        Turn: {turn === 1 ? "black" : "white"} <br />
-        The game is {gameRunning ? "on" : "done."} <br />
-        {gameRunning
-          ? ""
-          : "Winner is: " + (score.white > score.black ? "White" : "Black")}
-      </p>
-      <div>
-        <button onClick={newGame}>new game</button>
-      </div>
-
-      {gameField.map((row, i) => (
-        <div key={i} className="row">
-          {row.map((cell, j) => (
-            <Cell row={i} cell={j} onMove={makeMove} key={j} color={cell} />
-          ))}
-        </div>
-      ))}
-    </section>
-  );
-}

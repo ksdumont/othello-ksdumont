@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import gameHelper from "../util/sGameHelper";
+import gameHelper from "../util/tGameHelper";
 import Cell from "../components/Cell";
 
 export default function Game(props) {
@@ -10,7 +10,24 @@ export default function Game(props) {
 
   useEffect(() => {
     setScore(gameHelper.pieceCount(gameField));
-  }, []);
+
+    const gameStatus = gameHelper.checkGameStatus(turn, gameField);
+    if (gameStatus.gameRunning && !gameStatus.movePossible) {
+      //check if possible for other player
+      let gameEndCheck = gameHelper.checkGameStatus(
+        turn === 0 ? 1 : 0,
+        gameField
+      );
+      if (!gameEndCheck.movePossible) {
+        // game over
+        setGameRunning(false);
+      } else {
+        // skip turn
+        setTurn(!turn);
+      }
+    }
+    setGameRunning(gameStatus.gameRunning);
+  }, [gameField, turn, gameRunning]);
 
   const makeMove = (row, cell) => {
     // Check if move is valid
@@ -23,13 +40,11 @@ export default function Game(props) {
       setTurn(turn === 1 ? 0 : 1);
     }
     setScore(newScore);
-    setGameRunning(gameHelper.checkGameStatus());
   };
 
   const newGame = () => {
     setGameField(gameHelper.generateBoard());
     setTurn(1);
-    setScore(gameHelper.pieceCount(gameField));
   };
 
   return (
@@ -56,9 +71,18 @@ export default function Game(props) {
           </div>
         ))}
       </section>
-      <div>The game is {gameRunning ? "on" : "done"}</div>
+      <div className="game-over-text">
+        <span>
+          {gameRunning
+            ? " "
+            : "Game Over. The Winner is  " +
+              (score.white > score.black ? "White" : "Black")}
+        </span>
+      </div>
       <div>
-        <button onClick={newGame}>New Game</button>
+        <button className="button-reset" onClick={newGame}>
+          Reset Game
+        </button>
       </div>
     </section>
   );
