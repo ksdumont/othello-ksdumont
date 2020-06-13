@@ -3,6 +3,7 @@ import React from "react";
 export default function Cell({ color, row, cell, onMove }) {
   const makeMove = () => {
     if (color === null) {
+      console.log(row, cell);
       onMove(row, cell);
     }
   };

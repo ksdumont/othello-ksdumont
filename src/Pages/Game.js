@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import gameHelper from "../util/gameHelper";
+import gameHelper from "../util/sGameHelper";
 import Cell from "../components/Cell";
 
 export default function Game(props) {
   const [gameField, setGameField] = useState(gameHelper.generateBoard());
   const [turn, setTurn] = useState(1);
   const [score, setScore] = useState({});
+  const [gameRunning, setGameRunning] = useState(true);
 
   useEffect(() => {
     setScore(gameHelper.pieceCount(gameField));
@@ -22,7 +23,15 @@ export default function Game(props) {
       setTurn(turn === 1 ? 0 : 1);
     }
     setScore(newScore);
+    setGameRunning(gameHelper.checkGameStatus());
   };
+
+  const newGame = () => {
+    setGameField(gameHelper.generateBoard());
+    setTurn(1);
+    setScore(gameHelper.pieceCount(gameField));
+  };
+
   return (
     <section>
       <h1 className="heading">Othello</h1>
@@ -47,6 +56,10 @@ export default function Game(props) {
           </div>
         ))}
       </section>
+      <div>The game is {gameRunning ? "on" : "done"}</div>
+      <div>
+        <button onClick={newGame}>New Game</button>
+      </div>
     </section>
   );
 }
