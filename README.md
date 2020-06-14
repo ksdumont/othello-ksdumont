@@ -2,10 +2,6 @@
 
 ## To Get Started
 
-In the project directory, you can run:
-
-### unzip othello-ksdumont.zip
-
 ### cd othello-ksdumont
 
 ### npm install
