@@ -15,41 +15,84 @@ const helper = {
       rows.push(cells);
     }
     // debug
-    // rows = [
-    //   [1, 1, 1, 1, 1, 1, 1, 1],
-    //   [1, 0, 0, 0, 0, 0, 0, 1],
-    //   [1, 0, 0, 0, 0, 0, 0, 1],
-    //   [1, 0, 0, 0, 0, 0, 0, 1],
-    //   [1, 0, 0, 0, 0, 0, 0, 1],
-    //   [1, 0, 0, 0, 0, 0, 0, 1],
-    //   [1, 1, 1, 1, 1, 0, 0, null],
-    //   [1, 1, 1, 1, 1, 1, 1, null],
-    // ];
+    /*rows = [
+        [0, 0, 0, 0, 1, 1, 1, 1],
+        [0, 0, 0, 0, 1, 1, 1, 1],
+        [0, 0, 0, 0, 1, 1, 1, 1],
+        [0, 0, 1, 1, 1, 1, 1, 1],
+        [0, 0, 1, 0, 1, 1, 1, 1],
+        [0, 0, 0, 1, 1, 1, 1, 1],
+        [null, 0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 1, 1]
+    ]*/
     this.globalVars.game = rows;
     return rows;
   },
   globalVars: {
-    potential: [],
+    potential: [], // keep in memory what could potentially flip, while going through board, provided will find own color eventually
     game: [],
-    virtual: false, // a flag to know if we want to execute the flips, check to see if there are potentials to know if there is a valid move
+    virtual: false, // evaluate if we want to flip something or not, let make sure we find empty cells where we can potentially place players piece to see if valid move
   },
-  checkGameStatus(turn) {
-    this.globalVars.virtual = true;
+  hasNeighbor(game, rowIndex, cellIndex) {
+    let found = false;
+    let above = game[rowIndex - 1];
+    let below = game[rowIndex + 1];
+    let nearField = [];
+    if (typeof above !== "undefined") {
+      nearField.push([
+        game[rowIndex - 1][cellIndex - 1],
+        game[rowIndex - 1][cellIndex],
+        game[rowIndex - 1][cellIndex + 1],
+      ]);
+    } else {
+      return false;
+    }
+    nearField.push([
+      game[rowIndex][cellIndex - 1],
+      game[rowIndex][cellIndex],
+      game[rowIndex][cellIndex + 1],
+    ]);
+    if (typeof below !== "undefined") {
+      nearField.push([
+        game[rowIndex + 1][cellIndex - 1],
+        game[rowIndex + 1][cellIndex],
+        game[rowIndex + 1][cellIndex + 1],
+      ]);
+    }
+
+    nearField.forEach((row) => {
+      row.forEach((cell) => {
+        if (cell !== null) {
+          found = true;
+        }
+      });
+    });
+
+    return found;
+  },
+  checkGameStatus(turn, game) {
+    console.log(turn);
+    this.globalVars.potential = []; // clear potentials
+    this.globalVars.virtual = true; // make sure we're not flipping, checking if next player can place a piece after player places a piece.
     // all fields are not null
     let openCell = false;
     let movePossible = false;
-    this.globalVars.game.forEach((row) => {
-      row.forEach((cell) => {
+    game.forEach((row, rowIndex) => {
+      row.forEach((cell, cellIndex) => {
         if (cell === null) {
-          openCell = true;
-          if (!movePossible) {
-            this.evaluateMove(row, cell, this.globalVars.game, turn); //in virtual mode
-            console.log(this.globalVars.potential);
+          openCell = true; // board not full
+          if (
+            !movePossible &&
+            game[rowIndex][cellIndex] === null &&
+            this.hasNeighbor(game, rowIndex, cellIndex) // if none of the surrounding cells is from the other player, it can not be a valid move
+          ) {
+            this.evaluateMove(rowIndex, cellIndex, this.globalVars.game, turn);
             movePossible = this.globalVars.potential.length > 0;
           }
         }
       });
     });
+
     this.globalVars.virtual = false;
     return {
       movePossible,
@@ -69,27 +112,26 @@ const helper = {
     ];
     let currentDirectionIndex = directions.indexOf(direction);
     if (currentDirectionIndex === -1) {
-      // ?
+      // if index not found, returns -1 (never false), catches infinite looping through directions
       return game;
     }
     if (!this.globalVars.virtual) {
-      // only clearing potentials if we actually flip, not the case in virtual
-      this.globalVars.potential = [];
+      this.globalVars.potential = []; // reset for every direction
     }
-
-    this.globalVars.game = game;
+    this.globalVars.game = game; // sychronize the board with React
     let offset;
 
     switch (direction) {
       case "top":
         if (row === 0) {
-          this.checkCellValue(
-            game[0][cell],
+          // click on top row, and check above
+          this.evaluateMove(
+            // no point on checking cell value above top row
             row,
             cell,
+            game,
             turn,
-            directions[currentDirectionIndex + 1],
-            [0, cell]
+            directions[currentDirectionIndex + 1]
           );
         }
         for (let i = row - 1; i >= 0; i--) {
@@ -181,13 +223,13 @@ const helper = {
         break;
       case "bottom":
         if (row === 7) {
-          this.checkCellValue(
-            game[7][cell],
+          this.evaluateMove(
+            // no point of checking cell value under last row
             row,
             cell,
+            game,
             turn,
-            directions[currentDirectionIndex + 1],
-            [7, cell]
+            directions[currentDirectionIndex + 1]
           );
         }
         for (let i = row + 1; i <= 7; i++) {
@@ -281,8 +323,8 @@ const helper = {
   },
   checkCellValue(condition, row, cell, turn, nextDirection, potentialValues) {
     if (
-      typeof condition === "undefined" ||
-      typeof this.globalVars.game[row] === "undefined" ||
+      typeof condition === "undefined" || //at any outer border the next cell doesnt exist
+      typeof this.globalVars.game[row] === "undefined" || //edge cases, end of any part of board
       typeof this.globalVars.game[row][cell] === "undefined"
     ) {
       return this.evaluateMove(
@@ -304,23 +346,24 @@ const helper = {
       );
     }
     if (condition !== turn) {
-      this.globalVars.potential.push(potentialValues);
+      // opposing player's color
 
-      //upwards direction
+      this.globalVars.potential.push(potentialValues); // potential values passed in from the iteration
+      // edge cases below
+      // secure top & bottom row & corners undefined evaluation, if collect potentials that dont lead to anything, potentialValues[0] = row, potentialValues[1] = cell/ col
       if (
-        potentialValues[0] === 0 &&
-        ["topleft", "top", "topright"].includes(nextDirection)
+        (potentialValues[1] === 0 && // if upper left and bottom right corner
+          (potentialValues[0] === 0 || potentialValues[0] === 7)) ||
+        (potentialValues[1] === 7 && // or top right and bottom left
+          (potentialValues[0] === 0 || potentialValues[0] === 7)) ||
+        (potentialValues[0] === 0 && // if in first row, if next direction is right , then currently going top right
+          ["topleft", "top", "topright", "right"].includes(nextDirection)) ||
+        (potentialValues[0] === 7 && // same for bottom row
+          ["bottomright", "bottom", "bottomleft", "left"].includes(
+            nextDirection
+          ))
       ) {
-      }
-
-      //downward directions
-      if (
-        potentialValues[0] === 7 &&
-        ["bottomright", "bottom", "bottomleft"].includes(nextDirection)
-      ) {
-      }
-
-      if (typeof this.globalVars.game[potentialValues[0] + 1] === "undefined") {
+        this.globalVars.potential = [];
         return this.evaluateMove(
           row,
           cell,
@@ -333,6 +376,7 @@ const helper = {
     if (condition === turn) {
       this.globalVars.game = this.completeDirection(row, cell, turn);
       if (nextDirection) {
+        // only false if done
         return this.evaluateMove(
           row,
           cell,
@@ -350,9 +394,9 @@ const helper = {
     if (!this.globalVars.virtual) {
       this.globalVars.potential.forEach((flip) => {
         this.globalVars.game[flip[0]][flip[1]] = turn;
-      }); // the actual flip
+      });
       if (this.globalVars.potential.length > 0) {
-        this.globalVars.game[row][cell] = turn; // the piece getting placed
+        this.globalVars.game[row][cell] = turn;
       }
     }
     return this.globalVars.game;
@@ -380,78 +424,3 @@ const helper = {
 };
 
 export default helper;
-
-// game below
-
-import React, { useState, useEffect } from "react";
-import gameHelper from "../util/gameHelper";
-import Cell from "../components/Cell";
-
-export default function Game(props) {
-  const [gameField, setGameField] = useState(gameHelper.generateBoard());
-  const [turn, setTurn] = useState(1);
-  const [score, setScore] = useState({});
-  const [gameRunning, setGameRunning] = useState(true);
-  useEffect(() => {
-    setScore(gameHelper.pieceCount(gameField));
-    const gameStatus = gameHelper.checkGameStatus(turn, gameField);
-    if (gameStatus.gameRunning && !gameStatus.movePossible) {
-      // check if possible for other player
-      let gameEndCheck = gameHelper.checkGameStatus(
-        turn === 0 ? 1 : 0,
-        gameField
-      );
-      if (!gameEndCheck.movePossible) {
-        // game over
-        console.log("set game over");
-      } else {
-        // prompt skipping player
-        alert("Skipping player");
-        console.log("switch turn");
-        setTurn(turn === 0 ? 1 : 0);
-      }
-    }
-    console.log(gameStatus);
-    setGameRunning(gameStatus.gameRunning);
-    console.log(gameField);
-  }, [gameField, turn]);
-  const makeMove = (row, cell) => {
-    console.log("mode:" + gameHelper.globalVars.virtual);
-    // valid?
-    setGameField(gameHelper.evaluateMove(row, cell, gameField, turn));
-    const newScore = gameHelper.pieceCount(gameField);
-    let blackOrWhite = turn === 0 ? "white" : "black";
-    if (score[blackOrWhite] !== newScore[blackOrWhite]) {
-      setTurn(turn === 1 ? 0 : 1);
-    }
-    setScore(newScore);
-  };
-  const newGame = () => {
-    setGameField(gameHelper.generateBoard());
-    setTurn(1);
-  };
-  return (
-    <section>
-      <h1>Othello</h1>
-      <p>
-        White: {score.white} Black: {score.black} <br />
-        Turn: {turn === 1 ? "black" : "white"} <br />
-        The game is {gameRunning ? "on" : "done."} <br />
-        {gameRunning
-          ? ""
-          : "Winner is: " + (score.white > score.black ? "White" : "Black")}
-      </p>
-      <div>
-        <button onClick={newGame}>new game</button>
-      </div>
-
-      {gameField.map((row, i) => (
-        <div key={i} className="row">
-          {row.map((cell, j) => (
-            <Cell row={i} cell={j} onMove={makeMove} key={j} color={cell} />
-          ))}
-        </div>
-      ))}
-    </section>
-  );
-}

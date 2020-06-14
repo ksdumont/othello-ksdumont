@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import gameHelper from "../util/tGameHelper";
+import gameHelper from "../util/uGameHelper";
 import Cell from "../components/Cell";
 
 export default function Game(props) {
@@ -23,11 +23,12 @@ export default function Game(props) {
         setGameRunning(false);
       } else {
         // skip turn
-        setTurn(!turn);
+        alert("skipping player");
+        setTurn(turn === 0 ? 1 : 0);
       }
     }
     setGameRunning(gameStatus.gameRunning);
-  }, [gameField, turn, gameRunning]);
+  }, [gameField, turn]);
 
   const makeMove = (row, cell) => {
     // Check if move is valid

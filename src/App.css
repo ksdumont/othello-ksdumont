@@ -67,7 +67,7 @@ html {
 .row {
   display: flex;
   justify-content: center;
-  animation: gameBoardOpacity 4s ease-in;
+  animation: gameBoardOpacity 3s ease-in;
 }
 .cell {
   width: 50px;

@@ -15,16 +15,16 @@ const helper = {
       rows.push(cells);
     }
     // debug
-    rows = [
-      [1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 0, 0, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, null],
-    ];
+    /* rows = [
+         [null, 1, 1, 1, 1, 1, 1, 1],
+         [1, 1, 1, 1, 1, 1, 1, 1],
+         [1, 1, 0, 0, 0, 0, 0, 1],
+         [1, 1, 1, 1, 1, 1, 1, 1],
+         [1, 1, 1, 1, 1, 1, 1, 1],
+         [1, 1, 1, 1, 1, 1, 1, 1],
+         [1, 1, 1, 1, 1, 1, 1, 1],
+         [1, 1, 1, 1, 1, 1, 1, null],
+     ]*/
     this.globalVars.game = rows;
     return rows;
   },
@@ -32,6 +32,44 @@ const helper = {
     potential: [],
     game: [],
     virtual: false,
+  },
+  hasNeighbor(game, rowIndex, cellIndex) {
+    // prevent running through all directions if nothing is next to click, surrounded by nulls
+    let found = false;
+    let above = game[rowIndex - 1];
+    let below = game[rowIndex + 1];
+    let nearField = [];
+    if (typeof above !== "undefined") {
+      nearField.push([
+        game[rowIndex - 1][cellIndex - 1],
+        game[rowIndex - 1][cellIndex],
+        game[rowIndex - 1][cellIndex + 1],
+      ]);
+    } else {
+      return false;
+    }
+    nearField.push([
+      game[rowIndex][cellIndex - 1],
+      game[rowIndex][cellIndex],
+      game[rowIndex][cellIndex + 1],
+    ]);
+    if (typeof below !== "undefined") {
+      nearField.push([
+        game[rowIndex + 1][cellIndex - 1],
+        game[rowIndex + 1][cellIndex],
+        game[rowIndex + 1][cellIndex + 1],
+      ]);
+    }
+
+    nearField.forEach((row) => {
+      row.forEach((cell) => {
+        if (cell !== null) {
+          found = true;
+        }
+      });
+    });
+
+    return found;
   },
   checkGameStatus(turn, game) {
     console.log(turn);
@@ -44,7 +82,11 @@ const helper = {
       row.forEach((cell, cellIndex) => {
         if (cell === null) {
           openCell = true;
-          if (!movePossible) {
+          if (
+            !movePossible &&
+            game[rowIndex][cellIndex] === null &&
+            this.hasNeighbor(game, rowIndex, cellIndex)
+          ) {
             this.evaluateMove(rowIndex, cellIndex, this.globalVars.game, turn);
             movePossible = this.globalVars.potential.length > 0;
           }
