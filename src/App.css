@@ -19,6 +19,8 @@ html {
   margin: 10px auto;
 }
 
+/* score */
+
 .score {
   display: flex;
   justify-content: center;
@@ -50,10 +52,14 @@ html {
   position: relative;
   animation: whiteScore 1.5s ease-out;
 }
+
+/* Turn */
+
 .turn {
   font-size: 1.5rem;
   font-weight: 900;
   margin-bottom: 20px;
+  animation: gameBoardOpacity 3s ease-in;
 }
 .turn-black {
   color: black;
@@ -62,7 +68,7 @@ html {
   color: white;
 }
 
-/* board */
+/* Board */
 
 .row {
   display: flex;
@@ -91,6 +97,9 @@ html {
   background-color: whitesmoke;
   box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
+
+/* Game Over Text */
+
 .game-over-text {
   margin-top: 15px;
 }
@@ -112,11 +121,13 @@ html {
   color: black;
   background: white;
   border: none;
+  cursor: pointer;
+  animation: gameBoardOpacity 3s ease-in;
 }
 .button-reset:hover {
   transform: scale(1.2);
   color: white;
-  background: black;
+  background: linear-gradient(0.25turn, #333, rgb(0, 255, 127, 0.5), #333);
 }
 
 /* keyframes */

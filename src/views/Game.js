@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import gameHelper from "../util/uGameHelper";
+import gameHelper from "../util/gameHelper";
 import Cell from "../components/Cell";
 
 export default function Game(props) {
@@ -13,17 +13,16 @@ export default function Game(props) {
 
     const gameStatus = gameHelper.checkGameStatus(turn, gameField);
     if (gameStatus.gameRunning && !gameStatus.movePossible) {
-      //check if possible for other player
+      // Check if there's a possible move for the other player
       let gameEndCheck = gameHelper.checkGameStatus(
         turn === 0 ? 1 : 0,
         gameField
       );
       if (!gameEndCheck.movePossible) {
-        // game over
+        // Game Over
         setGameRunning(false);
       } else {
-        // skip turn
-        alert("skipping player");
+        // Skip turn
         setTurn(turn === 0 ? 1 : 0);
       }
     }

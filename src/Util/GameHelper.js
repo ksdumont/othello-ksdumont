@@ -15,12 +15,81 @@ const helper = {
       }
       rows.push(cells);
     }
+
     this.globalVars.game = rows;
     return rows;
   },
   globalVars: {
-    potential: [],
+    potential: [], // store what could potentially get flipped in a turn, provided will find its own color eventually
     game: [],
+    virtual: false, // a flag to know if we want to execute the flips, check to see if there are potentials to know if there is a valid move
+  },
+
+  /* Prevent running through all directions if nothing is next to the cell that is clicked, i.e. surrounded by nulls */
+  hasNeighbor(game, rowIndex, cellIndex) {
+    let found = false;
+    let above = game[rowIndex - 1];
+    let below = game[rowIndex + 1];
+    let nearField = [];
+    if (typeof above !== "undefined") {
+      nearField.push([
+        game[rowIndex - 1][cellIndex - 1],
+        game[rowIndex - 1][cellIndex],
+        game[rowIndex - 1][cellIndex + 1],
+      ]);
+    } else {
+      return false;
+    }
+    nearField.push([
+      game[rowIndex][cellIndex - 1],
+      game[rowIndex][cellIndex],
+      game[rowIndex][cellIndex + 1],
+    ]);
+    if (typeof below !== "undefined") {
+      nearField.push([
+        game[rowIndex + 1][cellIndex - 1],
+        game[rowIndex + 1][cellIndex],
+        game[rowIndex + 1][cellIndex + 1],
+      ]);
+    }
+
+    nearField.forEach((row) => {
+      row.forEach((cell) => {
+        if (cell !== null) {
+          found = true;
+        }
+      });
+    });
+
+    return found;
+  },
+  /* Check if there is a possible move to determine if Game is over */
+  checkGameStatus(turn, game) {
+    this.globalVars.potential = []; // clear potentials
+    this.globalVars.virtual = true; // to ensure we're not flipping, check if next player can place a piece
+    let openCell = false; // all fields are not null
+    let movePossible = false;
+    game.forEach((row, rowIndex) => {
+      row.forEach((cell, cellIndex) => {
+        if (cell === null) {
+          openCell = true; // board is not full
+          if (
+            !movePossible &&
+            game[rowIndex][cellIndex] === null &&
+            this.hasNeighbor(game, rowIndex, cellIndex) // if none of the surrounding cells is from the other player, it can not be a valid move
+          ) {
+            this.evaluateMove(rowIndex, cellIndex, this.globalVars.game, turn); // in virtual mode
+            movePossible = this.globalVars.potential.length > 0;
+          }
+        }
+      });
+    });
+
+    this.globalVars.virtual = false;
+    return {
+      movePossible,
+      gameRunning: openCell,
+    };
   },
   evaluateMove(row, cell, game, turn, direction = "top") {
     const directions = [
@@ -33,26 +102,27 @@ const helper = {
       "left",
       "topleft",
     ];
-
     let currentDirectionIndex = directions.indexOf(direction);
-
     if (currentDirectionIndex === -1) {
+      // catches infinite looping through directions
       return game;
     }
-    this.globalVars.potential = [];
+    if (!this.globalVars.virtual) {
+      this.globalVars.potential = []; // reset for every direction
+    }
     this.globalVars.game = game;
     let offset;
+
     switch (direction) {
       case "top":
         if (row === 0) {
-          // if row goes into negative for loop will never run (for top and top right)
-          this.checkCellValue(
-            game[0][cell],
+          // skip 'top' direction, if in top row
+          this.evaluateMove(
             row,
             cell,
+            game,
             turn,
-            directions[currentDirectionIndex + 1],
-            [0, cell]
+            directions[currentDirectionIndex + 1]
           );
         }
         for (let i = row - 1; i >= 0; i--) {
@@ -71,6 +141,7 @@ const helper = {
         }
         break;
       case "topright":
+        offset = 0;
         if (row === 0) {
           this.checkCellValue(
             game[0][cell],
@@ -81,7 +152,6 @@ const helper = {
             [0, cell]
           );
         }
-        offset = 0;
         for (let i = row - 1; i >= 0; i--) {
           offset++;
           if (
@@ -115,6 +185,16 @@ const helper = {
         }
         break;
       case "bottomright":
+        if (row === 7) {
+          this.checkCellValue(
+            game[7][cell],
+            row,
+            cell,
+            turn,
+            directions[currentDirectionIndex + 1],
+            [7, cell]
+          );
+        }
         offset = 0;
         for (let i = row + 1; i <= 7; i++) {
           offset++;
@@ -133,7 +213,17 @@ const helper = {
         }
         break;
       case "bottom":
-        for (let i = row + 1; i < 8; i++) {
+        if (row === 7) {
+          // skip 'bottom' direction, if in last row
+          this.evaluateMove(
+            row,
+            cell,
+            game,
+            turn,
+            directions[currentDirectionIndex + 1]
+          );
+        }
+        for (let i = row + 1; i <= 7; i++) {
           if (
             this.checkCellValue(
               game[i][cell],
@@ -149,8 +239,18 @@ const helper = {
         }
         break;
       case "bottomleft":
+        if (row === 7) {
+          this.checkCellValue(
+            game[7][cell],
+            row,
+            cell,
+            turn,
+            directions[currentDirectionIndex + 1],
+            [7, cell]
+          );
+        }
         offset = cell;
-        for (let i = row + 1; i < 8; i++) {
+        for (let i = row + 1; i <= 7; i++) {
           offset--;
           if (
             this.checkCellValue(
@@ -183,6 +283,16 @@ const helper = {
         }
         break;
       case "topleft":
+        if (row === 0) {
+          this.checkCellValue(
+            game[0][cell],
+            row,
+            cell,
+            turn,
+            directions[currentDirectionIndex + 1],
+            [0, cell]
+          );
+        }
         offset = cell;
         for (let i = row - 1; i >= 0; i--) {
           offset--;
@@ -204,9 +314,9 @@ const helper = {
   },
   checkCellValue(condition, row, cell, turn, nextDirection, potentialValues) {
     if (
-      // if go outside of gameboard, well catch it here.
-      typeof condition === "undefined" ||
-      typeof this.globalVars.game[row] === "undefined" ||
+      // edge cases: if go outside of gameboard, catch it here
+      typeof condition === "undefined" || // at outer border where the next cell doesn't exist
+      typeof this.globalVars.game[row] === "undefined" || // end of board
       typeof this.globalVars.game[row][cell] === "undefined"
     ) {
       return this.evaluateMove(
@@ -217,6 +327,7 @@ const helper = {
         nextDirection
       );
     }
+
     if (condition === null) {
       return this.evaluateMove(
         row,
@@ -226,11 +337,36 @@ const helper = {
         nextDirection
       );
     }
+    // opposing player's color
     if (condition !== turn) {
-      this.globalVars.potential.push(potentialValues);
+      this.globalVars.potential.push(potentialValues); // potential values passed in from the iteration
+      // edge cases below
+      // if collect potentials that dont lead to anything, i.e. top & bottom row & corners are undefined
+      // potentialValues[0] = row, potentialValues[1] = cell
+      if (
+        (potentialValues[1] === 0 && // if upper left and bottom right corner
+          (potentialValues[0] === 0 || potentialValues[0] === 7)) ||
+        (potentialValues[1] === 7 && // or top right and bottom left
+          (potentialValues[0] === 0 || potentialValues[0] === 7)) ||
+        (potentialValues[0] === 0 && // if in first row and next direction is going upwards
+          ["topleft", "top", "topright", "right"].includes(nextDirection)) ||
+        (potentialValues[0] === 7 && // if in bottom row and next direction is downwards
+          ["bottomright", "bottom", "bottomleft", "left"].includes(
+            nextDirection
+          ))
+      ) {
+        this.globalVars.potential = []; // clear the potential flips
+        return this.evaluateMove(
+          row,
+          cell,
+          this.globalVars.game,
+          turn,
+          nextDirection
+        );
+      }
     }
     if (condition === turn) {
-      this.globalVars.game = this.completeDirection(row, cell, turn);
+      this.globalVars.game = this.completeDirection(row, cell, turn); // flip the pieces in the middle
       if (nextDirection) {
         return this.evaluateMove(
           row,
@@ -248,11 +384,14 @@ const helper = {
   /* Flip all pieces in the middle */
 
   completeDirection(row, cell, turn) {
-    this.globalVars.potential.forEach((flip) => {
-      this.globalVars.game[flip[0]][flip[1]] = turn;
-    });
-    if (this.globalVars.potential.length > 0) {
-      this.globalVars.game[row][cell] = turn;
+    if (!this.globalVars.virtual) {
+      this.globalVars.potential.forEach((flip) => {
+        // flip pieces in the middle
+        this.globalVars.game[flip[0]][flip[1]] = turn;
+      });
+      if (this.globalVars.potential.length > 0) {
+        this.globalVars.game[row][cell] = turn; // place piece
+      }
     }
     return this.globalVars.game;
   },
